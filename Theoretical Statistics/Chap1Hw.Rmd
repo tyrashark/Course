@@ -1,0 +1,155 @@
+---
+title: "Chapter 1"
+author: "Sungmin Ji"
+date: "2024-08-29"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+```
+
+
+
+# Example 1: Kidney Data
+```{r echo=TRUE}
+## Data
+kidney <- read.table(url("https://hastie.su.domains/CASI_files/DATA/kidney.txt"), header=T)
+
+## Fit
+object <- lm(tot~age, data=kidney)
+summary(object)
+age_new <- (2:8)*10
+```
+
+## Fig1.1
+```{r echo=TRUE, fig.height=5, fig.width=5}
+## Plot
+plot(tot~age, pch=8, col="blue", cex=0.5, data=kidney)
+abline(object, col="green")
+result <- predict(object, newdata=list(age=age_new), se.fit=T)
+segments(age_new, y0=result$fit-2*result$se.fit, y1=result$fit+2*result$se.fit)
+```
+
+
+## Local polynomial; with +-2 bootstrap sd
+```{r echo=TRUE, fig.height=5, fig.width=5, paged.print=FALSE}
+## lowess
+object2 <- lowess(kidney$tot~kidney$age, f=1/3)
+plot(tot~age, pch=8, col="blue", cex=0.5, data=kidney)
+lines(object2, col="green")
+
+lfun <- approxfun(object2) ## Interpolation
+fit2 <- round(lfun((2:8)*10),2)
+fit2
+
+## loess
+object3 <- loess(tot~age, data=kidney, span=1/3, degree=1)
+plot(tot~age, pch=8, col="blue", cex=0.5, data=kidney)
+lines(kidney$age, predict(object3), col="red")
+```
+
+## Fig1.2
+```{r echo=TRUE, warning=FALSE}
+##Bootstrap (Replications=250 times)
+n <- length(kidney$tot)
+index <- sample(n, n, replace=T)  
+
+set.seed(1)
+temp <- rep(NULL, 7)
+for(i in 1:250){
+  index <- sample(n,n, replace=T)
+  tempobject <- lowess(kidney$tot[index]~kidney$age[index], f=1/3)
+  lfun <- approxfun(tempobject) ## Interpolation
+  temp <- rbind(temp, lfun(age_new))
+}
+
+btse <- apply(temp, 2, FUN=function(x) sd(x, na.rm = T))
+```
+
+```{r echo=TRUE, fig.height=5, fig.width=5}
+plot(tot~age, pch=8, col="blue", cex=0.5, data=kidney)
+lines(object2, col="green")
+segments(age_new, y0=fit2-2*btse, y1=fit2+2*btse)
+```
+
+## Fig1.3
+```{r echo=TRUE, fig.height=5, fig.width=5}
+plot(object2, type="l", ylim=c(-6,4), xlab="age", ylab="tot")
+set.seed(1)
+for(i in 1:25){
+  index <- sample(n,n, replace=T)
+  tempobject <- lowess(kidney$tot[index]~kidney$age[index], f=1/3)
+  lines(tempobject, col=i)
+}
+```
+
+## Table 1.1
+```{r echo=TRUE}
+table <- rbind(age_new, result$fit, result$se.fit, fit2, btse)
+rownames(table) <- c("age", "linear regression", "std error", "lowess", "bootstrap std error")
+
+print(round(table,2))
+```
+
+# Example 2: Leukemia data
+
+```{r echo=TRUE}
+## Data
+leukemia_big <- read.csv("http://hastie.su.domains/CASI_files/DATA/leukemia_big.csv")
+dim(leukemia_big)
+
+## Extract parts
+names(leukemia_big)
+library(stringr)
+
+subj <- names(leukemia_big)
+str_detect(subj, "ALL") ## String detection using a pattern
+
+ALLs <- which(str_detect(subj, "ALL"))
+AMLs <- which(str_detect(subj, "AML"))
+ALLs
+AMLs
+```
+
+## Fig 1.4
+```{r echo=TRUE, fig.height=7, fig.width=7}
+leukemia <- as.matrix(leukemia_big)
+par(mfrow=c(2,1))
+## The histograms compare the genetic activitivies in two groups for gene 136
+hist(leukemia[136, ALLs], breaks=12, 
+     xlab = paste0("ALL scores - mean:", round(mean(leukemia[136, ALLs]),3)))
+hist(leukemia[136, AMLs], breaks=12, 
+     xlab = paste0("AML scores - mean:", round(mean(leukemia[136, AMLs]),3)))
+```
+
+## Fig. 1.5
+```{r echo=TRUE, fig.height=5, fig.width=5, paged.print=FALSE}
+## t-test
+t.test(leukemia[136,AMLs], leukemia[136,ALLs], var.equal = T)
+
+m <- nrow(leukemia)
+tstat <- pvalue <- numeric(m)
+
+for(i in 1:m){
+  tt <- t.test(leukemia[i, AMLs], leukemia[i, ALLs], var.equal = T)
+  tstat[i] <- tt$statistic
+  pvalue[i] <- tt$p.value
+}
+
+## Two-sample t-statistics for 7128 genes; the smmoth curve is the theoretical null density for the t-statistic
+hist(tstat, breaks=50, freq=FALSE)
+a <- (1:200)/10-10
+lines(a, dt(a, df=70), col="red")
+```
+
+```{r echo=TRUE, fig.height=5, fig.width=5}
+## Comparison of the p-value and tstat  
+mean(pvalue < pvalue[136])
+mean(abs(tstat) > abs(tstat[136]))
+
+## Histogram of the estimated p-value5
+hist(pvalue, breaks=50)
+```
+
