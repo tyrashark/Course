@@ -2,9 +2,84 @@
 title: "Hw2 Math567A"
 author: "Sungmin Ji"
 date: "2024-09-10"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
+header-includes:
+   - \usepackage{amsmath}
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+
+# Ch2.1.
+
+## (a)
+Let $s \sim Binom(n, \theta), \hat \theta = \frac{s+1}{n+2}$.
+
+$$
+\begin{aligned}
+\mathbb E[\hat \theta] &= \frac{1}{n+2} + \frac{1}{n+2}\mathbb E[s] \\
+&=\frac{1}{n+2} + \frac{1}{n+2}n\theta \\
+&=\frac{n\theta + 1}{n+2}\\
+Bias &= \mathbb E[\hat \theta] - \theta = \frac{1 - 2\theta}{n+2}\\
+var(\hat \theta) &= \frac{1}{(n+2)^2} var(s+1)=\frac{1}{(n+2)^2} var(s)\\
+&=\frac{1}{(n+2)^2} n\theta(1-\theta)
+\end{aligned}
+$$
+## (b)
+
+$$se(\hat \theta) = \frac{1}{n+2}\sqrt{n\theta(1-\theta)}$$
+By Chebyshev inequality and that Bias and variance of $\hat \theta$ goes to $0$ as $n \to \infty$, $\hat \theta$ is a consistent estimator of $\theta$.
+
+Hence, by plugging $\theta$ with $\hat \theta$, the consisent estimator of $se(\hat \theta)$ can be achieved as
+
+$$\widehat{se(\hat \theta)} = \frac{1}{(n+2)^2}\sqrt{n(s+1)(n-s+1)}.$$
+
+# Ch2.3.
+
+Suppose that $\hat \theta(x)$ is calculated to estimate a parameter $\theta$ using a set of observations, $X=x$.
+To evaluate the accuracy of the estimation of $\theta$, Frequentists use the inference of the distribution of $\hat \theta(X)$.
+This inferred distribution is an empirical distribution for $\hat \theta(X)$, a function of the future trials $\{X\}$.
+Using the distribution feature of $\hat \theta(X)$, the accuracy of $\hat \theta(x)$ can be represented as the variability of $\hat \theta(X)$ by the future trials.
+
+\newpage
+
+# Ch2.5.
+
+```{r echo=TRUE, fig.height=5, fig.width=10, paged.print=FALSE}
+beta <- function(a, mu1=0.5, n=10){
+  x = qnorm(a, mean=0, sd=sqrt(n), lower.tail=F)
+  b = pnorm(x, mean=mu1*n, sd=sqrt(n))
+  return(b)
+}
+
+lr <- function(c, mu1=0.5, n=10){
+  qx = (2*c+n*mu1^2)/(2*mu1)
+  a = pnorm(qx, mean=0, sd=sqrt(n), lower.tail=F)
+  b = pnorm(qx, mean=mu1*n, sd=sqrt(n))
+  return(list(alpha=a,beta=b))
+}
+
+par(mfrow=c(1,2))
+## n=10
+n=10
+beta_n = function(x) {beta(x, n=n)}
+curve(beta_n, from=0, to=1, xlab="alpha", ylab="beta", main=paste0("n=",n))
+point_n10 <- matrix(unlist(lr(seq(2.75, -3.25, by=-1.0), n=n)), ncol=2, byrow=F)
+points(point_n10, col="red")
+
+## n=20
+n=20
+beta_n = function(x) {beta(x, n=n)}
+curve(expr=beta_n, from=0, to=1, xlab="alpha", ylab="beta", main=paste0("n=",n))
+point_n20 <- matrix(unlist(lr(seq(2.75, -3.25, by=-1.0), n=n)), ncol=2, byrow=F)
+points(point_n20, col="red")
+
+```
+
+In a comparison of two curves, one is calculated with n=10, the other is calculated with n=10, the curve becomes more concave as n increases, i.e. the slope becomes to zero more rapidly as alpha increases.
+
+
